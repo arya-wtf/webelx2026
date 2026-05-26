@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Elux Website Review &amp; New Structure — CTO Findings</title>
+<!-- DEVIATION FROM ELUX DESIGN SYSTEM:
+     The system targets operator dashboards. This is a slide deck for the team to read,
+     so we use a slide layout + keyboard nav. We KEEP the warm paper surfaces, the
+     typography-over-chrome hierarchy, the section-label style, direct voice, and
+     hardcoded colors (no CSS vars) so it stays on-brand and works offline. -->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #e9e7e0;
+    color: #1a1a18;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Deck shell ---------- */
+  .deck {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .slide {
+    display: none;
+    min-height: 100vh;
+    padding: 4.5rem 5rem 6rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    animation: fade 0.35s ease;
+  }
+  .slide.active { display: block; }
+
+  @keyframes fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Typography ---------- */
+  .kicker {
+    font-size: 11px;
+    font-weight: 700;
+    color: #8a8880;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 1.1rem;
+  }
+  h1 {
+    font-size: 3.4rem;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+  }
+  h2 {
+    font-size: 2.1rem;
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    font-weight: 800;
+    margin-bottom: 1.6rem;
+  }
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.4rem;
+  }
+  p { font-size: 1.02rem; line-height: 1.6; color: #36352f; }
+  .lead { font-size: 1.25rem; line-height: 1.55; color: #36352f; max-width: 760px; }
+  .muted { color: #6b6a63; }
+  strong { font-weight: 700; color: #1a1a18; }
+
+  /* ---------- Cards & surfaces ---------- */
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 0.5px solid #d3d1c7;
+    padding: 1.5rem 1.6rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .grid { display: grid; gap: 1rem; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+
+  /* ---------- Severity tags ---------- */
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 6px;
+    margin-bottom: 0.7rem;
+  }
+  .t-block { background: #fbe6e3; color: #b03a2d; }
+  .t-warn  { background: #fbf0d9; color: #9a6b16; }
+  .t-good  { background: #e3f0e6; color: #2f6b3c; }
+  .t-info  { background: #e4ebf6; color: #34507a; }
+
+  /* ---------- Number row ---------- */
+  .stat { }
+  .stat .n {
+    font-size: 2.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .stat .l { font-size: 0.82rem; color: #6b6a63; margin-top: 0.35rem; }
+
+  /* ---------- Finding rows ---------- */
+  .finding {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 1rem;
+    align-items: start;
+    padding: 1.1rem 0;
+    border-top: 0.5px solid #d8d6cc;
+  }
+  .finding:first-of-type { border-top: none; }
+  .badge {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  .b-red  { background: #f3c9c3; color: #8e2e22; }
+  .b-amber{ background: #f4e2bd; color: #845a10; }
+  .b-blue { background: #cdd9ee; color: #2c4673; }
+
+  /* ---------- Verdict pills for structure ---------- */
+  .verdict { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+  .v-keep   { background: #e3f0e6; color: #2f6b3c; }
+  .v-change { background: #fbf0d9; color: #9a6b16; }
+  .v-cut    { background: #fbe6e3; color: #b03a2d; }
+  .v-add    { background: #e4ebf6; color: #34507a; }
+
+  /* ---------- Structure table ---------- */
+  .struct { width: 100%; border-collapse: collapse; }
+  .struct td { padding: 0.85rem 0.6rem; border-top: 0.5px solid #d8d6cc; vertical-align: top; font-size: 0.95rem; }
+  .struct tr:first-child td { border-top: none; }
+  .struct .sn { font-weight: 800; color: #8a8880; width: 34px; }
+  .struct .st { font-weight: 700; width: 230px; }
+  .struct .sd { color: #4a4944; }
+
+  /* ---------- Two-column compare ---------- */
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+  .vs .col { padding: 1.3rem 1.4rem; border-radius: 12px; }
+  .vs .old { background: #f2efe8; border: 0.5px solid #d3d1c7; }
+  .vs .new { background: #1a1a18; color: #f3f1ea; }
+  .vs .new h3, .vs .new .head { color: #fff; }
+  .vs .new p { color: #c9c7bd; }
+  .vs .head { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.9rem; color: #8a8880; }
+  .vs ul { list-style: none; }
+  .vs li { font-size: 0.95rem; padding: 0.45rem 0; padding-left: 1.3rem; position: relative; line-height: 1.45; }
+  .vs li::before { content: "→"; position: absolute; left: 0; opacity: 0.5; }
+
+  ul.clean { list-style: none; }
+  ul.clean li { font-size: 1rem; line-height: 1.5; padding: 0.5rem 0 0.5rem 1.4rem; position: relative; color: #36352f; }
+  ul.clean li::before { content: ""; position: absolute; left: 2px; top: 1.05rem; width: 7px; height: 7px; border-radius: 50%; background: #c4452f; }
+
+  /* ---------- Priority columns ---------- */
+  .prio { padding: 1.3rem 1.4rem; border-radius: 12px; }
+  .prio.p0 { background: #fbe6e3; border: 0.5px solid #eec2bb; }
+  .prio.p1 { background: #fbf0d9; border: 0.5px solid #ecd9ab; }
+  .prio.p2 { background: #e4ebf6; border: 0.5px solid #c2d0e8; }
+  .prio .ph { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.9rem; }
+  .prio.p0 .ph { color: #b03a2d; }
+  .prio.p1 .ph { color: #9a6b16; }
+  .prio.p2 .ph { color: #34507a; }
+  .prio ul { list-style: none; }
+  .prio li { font-size: 0.92rem; line-height: 1.45; padding: 0.4rem 0; color: #36352f; }
+
+  /* ---------- Nav ---------- */
+  .nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 54px;
+    background: rgba(245,244,240,0.92);
+    backdrop-filter: blur(10px);
+    border-top: 0.5px solid #d3d1c7;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.5rem;
+    z-index: 50;
+  }
+  .nav .left { display: flex; align-items: center; gap: 0.9rem; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #c9c7bd; cursor: pointer; transition: all 0.2s; }
+  .dot.on { background: #1a1a18; transform: scale(1.3); }
+  .nav .title { font-size: 0.8rem; font-weight: 700; color: #6b6a63; letter-spacing: 0.02em; }
+  .nav .right { display: flex; align-items: center; gap: 0.6rem; }
+  .navbtn {
+    border: 0.5px solid #c9c7bd; background: #fff;
+    width: 34px; height: 34px; border-radius: 8px;
+    font-size: 1rem; cursor: pointer; color: #1a1a18;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .navbtn:hover { background: #f0eee8; }
+  .counter { font-size: 0.82rem; font-weight: 700; color: #6b6a63; min-width: 46px; text-align: center; }
+
+  .footnote { font-size: 0.85rem; color: #8a8880; margin-top: 2rem; }
+
+  .pill-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+
+  @media (max-width: 820px) {
+    .slide { padding: 3rem 1.5rem 6rem; }
+    h1 { font-size: 2.2rem; }
+    h2 { font-size: 1.6rem; }
+    .g2, .g3, .g4, .vs { grid-template-columns: 1fr; }
+    .nav .title { display: none; }
+    .struct .st { width: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- ============ SLIDE 1 — COVER ============ -->
+  <section class="slide active">
+    <div class="kicker">Internal Review · Prepared for the Elux team · 26 May 2026</div>
+    <h1>Website Revamp:<br>What's working, what's<br>not, and where to go.</h1>
+    <p class="lead">A CTO-level read on the <strong>eluxstaging2026</strong> build, plus a recommended section structure for the new AI-native positioning. Two ship-blockers, one strategic gap, and a clear punch-list.</p>
+    <div class="pill-row">
+      <span class="tag t-block" style="margin:0">2 ship-blockers</span>
+      <span class="tag t-warn" style="margin:0">1 strategic gap</span>
+      <span class="tag t-good" style="margin:0">80% already strong</span>
+    </div>
+    <p class="footnote">Use ← → arrow keys, the dots below, or the buttons to move through. 11 slides.</p>
+  </section>
+
+  <!-- ============ SLIDE 2 — THE HEADLINE ============ -->
+  <section class="slide">
+    <div class="kicker">The one-minute version</div>
+    <h2>The site is already good. Don't redo it — finish it.</h2>
+    <p class="lead" style="margin-bottom:2rem;">The staging build absorbed the Eleken playbook well: problem-to-solution framing, stage-based services, industry pages, owner-not-vendor positioning. The bones are right. The risk is in a few details that quietly cost trust or conversions.</p>
+    <div class="grid g3">
+      <div class="card">
+        <span class="tag t-block">Ship-blocker</span>
+        <h3>Fake-looking videos</h3>
+        <p class="muted">Random YouTube strangers stand in for case visuals. Reads as stock filler / fake testimonials.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-block">Ship-blocker</span>
+        <h3>Typos in live copy</h3>
+        <p class="muted">"Proccess", "Enterprice", "Bahance". On a design agency site, this is disproportionately damaging.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-warn">Strategic gap</span>
+        <h3>No AI-native story</h3>
+        <p class="muted">The whole reason for the revamp is invisible on the page. Today it reads as a (very good) pragmatic agency.</p>
+      </div>
+    </div>
+    <p class="footnote">Fix the two ship-blockers → launch-safe. Close the gap → the repositioning actually lands.</p>
+  </section>
+
+  <!-- ============ SLIDE 3 — WHAT'S WORKING ============ -->
+  <section class="slide">
+    <div class="kicker">Credit where due</div>
+    <h2>What's genuinely working</h2>
+    <div class="grid g2">
+      <div class="card">
+        <h3>✓ Hero is clean and confident</h3>
+        <p class="muted">"The Pragmatic Product Design Partner" + oversized type on dark canvas reads premium. The "Accepting 2 partners for Q1" scarcity line is a nice touch.</p>
+      </div>
+      <div class="card">
+        <h3>✓ Problem-to-solution framing</h3>
+        <p class="muted">The four founder situations (short on hands / adoption slowing / need MVP / not investor-ready) is exactly the Eleken move. Strong.</p>
+      </div>
+      <div class="card">
+        <h3>✓ Stage-based services</h3>
+        <p class="muted">Seed → Growth → Scale lets a visitor self-select. Much better than the old four-package menu.</p>
+      </div>
+      <div class="card">
+        <h3>✓ Owner-not-vendor positioning</h3>
+        <p class="muted">"We don't want to be hired. We want to be responsible." is a sharp, memorable line that separates you from cheap agencies.</p>
+      </div>
+      <div class="card">
+        <h3>✓ Industry pages planned</h3>
+        <p class="muted">FinTech / SaaS / EdTech with challenge→solution copy. This is your SEO engine — keep building it out.</p>
+      </div>
+      <div class="card">
+        <h3>✓ Chat-screenshot testimonials</h3>
+        <p class="muted">Real client messages feel authentic in a way polished quote cards don't. Good instinct — just curate them (see slide 6).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 4 — SHIP-BLOCKER 1 ============ -->
+  <section class="slide">
+    <span class="tag t-block">Ship-blocker · 01</span>
+    <h2>The problem-solution videos are random strangers.</h2>
+    <div class="grid g2" style="align-items:start; gap:1.6rem;">
+      <div>
+        <p style="margin-bottom:1rem;">Each of the four founder-case cards — <strong>Extend My Team, Redesign, Ship MVP, Polish for Investors</strong> — plays a video of an unrelated content creator: "Pitol In Motion," "Dani Lee," "Adriana Girdler," a woman in a bedroom.</p>
+        <p style="margin-bottom:1rem;">To a SaaS founder, this reads instantly as <strong>stock filler</strong> — or worse, <strong>fake testimonials</strong>. It actively destroys the trust the copy works so hard to build.</p>
+        <p class="muted">This is the single most damaging thing on the site.</p>
+      </div>
+      <div class="card" style="background:#1a1a18; color:#f3f1ea; border:none;">
+        <div class="kicker" style="color:#8a8880;">The fix</div>
+        <ul class="clean" style="margin-top:0.5rem;">
+          <li style="color:#e8e6dd;">Replace with real product UI / case screenshots from the actual project</li>
+          <li style="color:#e8e6dd;">Or kill the video entirely — a clean static illustration beats a fake-looking clip</li>
+          <li style="color:#e8e6dd;">If you want motion, use a short looping screen-recording of your own work</li>
+        </ul>
+        <p style="color:#9a988f; margin-top:1rem; font-size:0.9rem;">Non-negotiable before launch.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 5 — STRATEGIC GAP ============ -->
+  <section class="slide">
+    <span class="tag t-warn">Strategic gap</span>
+    <h2>Where is the "AI-native" in your AI-native repositioning?</h2>
+    <p class="lead" style="margin-bottom:1.8rem;">You told me the entire point of this revamp is transforming from a UI/UX agency into an <strong>AI-native product design studio</strong>. I read the whole site. That story is almost completely absent.</p>
+    <div class="vs">
+      <div class="col old">
+        <div class="head">What the site says today</div>
+        <ul>
+          <li>"Enterprise-grade UX frameworks with custom branding"</li>
+          <li>Why-choose-us = pragmatism, metrics, transparency</li>
+          <li>"Build-ready UX, not concept decks"</li>
+          <li class="muted" style="opacity:0.7;">All good — but all generic agency virtues</li>
+        </ul>
+      </div>
+      <div class="col new">
+        <div class="head">What's missing</div>
+        <ul>
+          <li>How AI changes the way you design</li>
+          <li>Why that makes you faster / cheaper / better</li>
+          <li>The contrast: old way vs AI-native way</li>
+          <li>Concrete proof — cycles, variations, iteration speed</li>
+        </ul>
+      </div>
+    </div>
+    <p class="footnote">Right now this is an excellent <em>pragmatic agency</em> site — not an <em>AI-native</em> one. A visitor would never know you've repositioned. This needs a dedicated section (see structure, slide 8–9).</p>
+  </section>
+
+  <!-- ============ SLIDE 6 — SMALLER FIXES ============ -->
+  <section class="slide">
+    <div class="kicker">Worth fixing before launch</div>
+    <h2>The smaller stuff that adds up</h2>
+    <div class="finding">
+      <span class="badge b-red">!</span>
+      <div>
+        <h3>Typos in client-facing copy</h3>
+        <p class="muted">"Proccess" (nav), "Enterprice" (project card), "Bahance" (footer). A prospect's literal thought: "if they can't proofread their own site, what's their QA like?" Sweep every section.</p>
+      </div>
+    </div>
+    <div class="finding">
+      <span class="badge b-amber">~</span>
+      <div>
+        <h3>Identical stats on every client card</h3>
+        <p class="muted">Every featured client says "Launch in 1 month / Reduce cost 30%" — copy-paste placeholder. Vary with real per-project numbers, or remove.</p>
+      </div>
+    </div>
+    <div class="finding">
+      <span class="badge b-amber">~</span>
+      <div>
+        <h3>Testimonials = politeness, not results</h3>
+        <p class="muted">Several are mid-project pleasantries ("I'll review and get back to you"). Curate for the ones that talk about <strong>outcomes</strong>: funding raised, drop-off fixed, time-to-launch cut.</p>
+      </div>
+    </div>
+    <div class="finding">
+      <span class="badge b-amber">~</span>
+      <div>
+        <h3>Stats section floats in a dead void</h3>
+        <p class="muted">95+ / 100+ / 20+ / 57% sit in a huge empty dark block. Numbers feel lost. Tighten the spacing so they read as a confident strip.</p>
+      </div>
+    </div>
+    <div class="finding">
+      <span class="badge b-blue">i</span>
+      <div>
+        <h3>Awards = mostly "Nominee"</h3>
+        <p class="muted">Fine as a trust strip, but don't oversell "Design Excellence" off nominations. Honest framing protects you.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 7 — PERFORMANCE ============ -->
+  <section class="slide">
+    <span class="tag t-warn">Technical</span>
+    <h2>Test the motion on a real phone before you trust it.</h2>
+    <div class="grid g2" style="gap:1.6rem; align-items:start;">
+      <div>
+        <p style="margin-bottom:1rem;">Several sections (the rock-texture block after the hero, "Featured Cases", "Built for Industries") render <strong>almost entirely empty</strong> until you scroll into them, and the scroll-pinning makes the page feel like it's fighting the user.</p>
+        <p>On desktop with a fast connection it's fine. On a mid-range Android or a throttled network, this can look <strong>broken</strong>.</p>
+      </div>
+      <div class="card">
+        <div class="kicker">QA checklist</div>
+        <ul class="clean" style="margin-top:0.4rem;">
+          <li>Test on a real Infinix / Vivo, not just the M1 Pro</li>
+          <li>Throttle to "Fast 3G" in DevTools and re-scroll</li>
+          <li>Check the scroll-pinning doesn't trap the user</li>
+          <li>Confirm reveal animations fire on first paint, not late</li>
+        </ul>
+      </div>
+    </div>
+    <p class="footnote">Awwwards-grade motion is only an asset if it's smooth. If it stutters, premium motion reads cheap — the opposite of the intent.</p>
+  </section>
+
+  <!-- ============ SLIDE 8 — STRUCTURE INTRO ============ -->
+  <section class="slide">
+    <div class="kicker">The recommended structure</div>
+    <h2>The core principle for the new site</h2>
+    <div class="vs" style="margin-bottom:1.8rem;">
+      <div class="col old">
+        <div class="head">Cuberto = the 8 seconds of wow</div>
+        <p>Lives in the hero and portfolio only. Big type, motion, dark canvas, magnetic feel. This is what makes them stop scrolling.</p>
+      </div>
+      <div class="col new">
+        <div class="head">Eleken = the 8 minutes of trust</div>
+        <p>Governs everything below the fold and the whole site architecture. Problem-agitation copy, industry pages, proof, SEO surface. This is what makes them book a call.</p>
+      </div>
+    </div>
+    <p class="lead">Your two references pull in opposite directions <em>on purpose</em>. Keep them in their lanes. If Cuberto's motion-first, copy-light philosophy bleeds into the whole homepage, you get a beautiful site that ranks for nothing and converts founders poorly.</p>
+  </section>
+
+  <!-- ============ SLIDE 9 — STRUCTURE TABLE ============ -->
+  <section class="slide">
+    <div class="kicker">Homepage · section by section</div>
+    <h2>Recommended structure</h2>
+    <table class="struct">
+      <tr><td class="sn">01</td><td class="st">Hero <span class="verdict v-keep">KEEP</span></td><td class="sd">Cuberto-style. <strong>Put "AI-native product design" in the first line</strong> — or the repositioning is invisible.</td></tr>
+      <tr><td class="sn">02</td><td class="st">Trust strip <span class="verdict v-add">ADD</span></td><td class="sd">Client logos + Clutch 5.0, thin, right under hero. Replaces "numbers first" — leading with stats signals low confidence.</td></tr>
+      <tr><td class="sn">03</td><td class="st">Portfolio highlight <span class="verdict v-keep">KEEP</span></td><td class="sd">Drag/scroll gallery as primary (shows more, lower risk). Each card opens a real case study. Save video for case pages.</td></tr>
+      <tr><td class="sn">04</td><td class="st">How AI-native solves it <span class="verdict v-add">ADD</span></td><td class="sd"><strong>The do-or-die section.</strong> Old way vs AI-native way, with concrete outcomes. This is the argument for the whole rebrand.</td></tr>
+      <tr><td class="sn">05</td><td class="st">Problem → Solution <span class="verdict v-keep">KEEP</span></td><td class="sd">The four founder cases. Fix the videos (slide 4).</td></tr>
+      <tr><td class="sn">06</td><td class="st">Numbers <span class="verdict v-change">MOVE</span></td><td class="sd">Reposition here as a confidence-booster before services — not as the lead.</td></tr>
+      <tr><td class="sn">07</td><td class="st">Services by stage <span class="verdict v-keep">KEEP</span></td><td class="sd">Seed / Growth / Scale. Re-cut the language through the AI-native lens.</td></tr>
+      <tr><td class="sn">08</td><td class="st">Industries → detail pages <span class="verdict v-keep">KEEP</span></td><td class="sd"><strong>Your SEO engine.</strong> Build as real, indexable pages — not anchor links. 4–6 verticals you can show work in.</td></tr>
+      <tr><td class="sn">09</td><td class="st">How we work <span class="verdict v-change">TRIM</span></td><td class="sd">Compress to a tight 4–5 step flow on homepage. Full detail on a /how-we-work page.</td></tr>
+      <tr><td class="sn">10</td><td class="st">Testimonials <span class="verdict v-keep">KEEP</span></td><td class="sd">Curate for outcomes. Lead with the strongest, results-focused ones.</td></tr>
+      <tr><td class="sn">11</td><td class="st">Awards / recognition <span class="verdict v-change">FOLD</span></td><td class="sd">Don't dedicate a full section to nominations. Fold into the trust strip with honest framing.</td></tr>
+      <tr><td class="sn">12</td><td class="st">"Who we're NOT for" <span class="verdict v-add">ADD</span></td><td class="sd">Repels bad leads, signals confidence. "Want a logo and a banner? Not us."</td></tr>
+      <tr><td class="sn">13</td><td class="st">CTA / contact <span class="verdict v-keep">KEEP</span></td><td class="sd">Steal the free / paid-pilot framing. "See how we work before you commit" is the highest-converting element.</td></tr>
+      <tr><td class="sn">14</td><td class="st">Fat footer <span class="verdict v-change">EXPAND</span></td><td class="sd">Services, industries, comparison pages, blog. Footers are SEO real estate + internal-link juice.</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ SLIDE 10 — WHAT'S MISSING / SEO ============ -->
+  <section class="slide">
+    <div class="kicker">Beyond the homepage</div>
+    <h2>Three things the structure needs that aren't pages yet</h2>
+    <div class="grid g3">
+      <div class="card">
+        <span class="tag t-info">SEO + Sales</span>
+        <h3>Comparison pages</h3>
+        <p class="muted">Elux vs freelancer · vs traditional agency · vs in-house. Pure SEO + sales-enablement. These rank and they close deals. (Eleken has these.)</p>
+      </div>
+      <div class="card">
+        <span class="tag t-info">SEO engine</span>
+        <h3>Blog / resource hub up front</h3>
+        <p class="muted">Your blog is buried. The 82-article SEO calendar already in motion <strong>is the funnel</strong> — surface it hard on homepage + footer.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-info">Conversion</span>
+        <h3>Qualification section</h3>
+        <p class="muted">"We are not for everyone." Repels mismatched leads, signals confidence, and makes the right buyer feel chosen.</p>
+      </div>
+    </div>
+    <p class="footnote" style="margin-top:2.5rem;">The homepage gets the wow. These pages get the <strong>traffic</strong> and do the <strong>convincing</strong> at scale. Eleken's 100+ articles + industry + comparison pages are why they rank — not their homepage.</p>
+  </section>
+
+  <!-- ============ SLIDE 11 — PUNCH LIST ============ -->
+  <section class="slide">
+    <div class="kicker">The launch punch-list</div>
+    <h2>Do it in this order</h2>
+    <div class="grid g3" style="gap:1.1rem;">
+      <div class="prio p0">
+        <div class="ph">P0 · Ship-blockers</div>
+        <ul>
+          <li><strong>Replace the random YouTube videos</strong> with real work or static visuals</li>
+          <li><strong>Fix all typos</strong> — Proccess, Enterprice, Bahance + full sweep</li>
+          <li>QA the scroll/motion on a real Android + throttled network</li>
+        </ul>
+      </div>
+      <div class="prio p1">
+        <div class="ph">P1 · Before real traffic</div>
+        <ul>
+          <li><strong>Add the "How AI-native solves it" section</strong> — close the strategic gap</li>
+          <li>Put "AI-native" in the hero's first line</li>
+          <li>Vary the per-client stats with real numbers</li>
+          <li>Curate testimonials for outcomes</li>
+          <li>Tighten the stats-section dead space</li>
+        </ul>
+      </div>
+      <div class="prio p2">
+        <div class="ph">P2 · The growth layer</div>
+        <ul>
+          <li>Build industries as real indexable pages</li>
+          <li>Add comparison pages (vs freelancer / agency / in-house)</li>
+          <li>Surface the blog on homepage + fatten the footer</li>
+          <li>Add the "who we're NOT for" qualifier</li>
+          <li>Add a /how-we-work detail page</li>
+        </ul>
+      </div>
+    </div>
+    <p class="footnote" style="margin-top:2rem;">P0 = launch-safe today. P1 = the repositioning lands. P2 = the SEO + conversion engine that compounds.</p>
+  </section>
+
+  <!-- ============ SLIDE 12 — NEXT ============ -->
+  <section class="slide">
+    <div class="kicker">Your move</div>
+    <h2>What should I build next?</h2>
+    <div class="grid g3">
+      <div class="card">
+        <span class="tag t-block">Highest leverage</span>
+        <h3>The AI-native section</h3>
+        <p class="muted">Deploy-ready copy + layout spec for the missing Section 04. Closes the gap that makes the whole rebrand worth doing.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-warn">Fastest to ship</span>
+        <h3>Full copy + proofing pass</h3>
+        <p class="muted">Every section, Webflow-ready: typos fixed, stats varied, testimonials curated. Hand straight to Rasya.</p>
+      </div>
+      <div class="card">
+        <span class="tag t-info">For the team</span>
+        <h3>Notion punch-list</h3>
+        <p class="muted">This P0/P1/P2 list as assignable Notion tasks with owners for Lintang to run.</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:2.2rem;">My pick: <strong>the AI-native section first.</strong> The two ship-blockers are quick mechanical fixes anyone on the team can do today. The strategic gap is the thing only the founder-and-CTO can decide — and it's the difference between a fresh coat of paint and a real repositioning.</p>
+    <p class="footnote">Prepared by Claude · CTO mode · for Arya &amp; the Elux Space team</p>
+  </section>
+
+</div>
+
+<!-- ============ NAV BAR ============ -->
+<div class="nav">
+  <div class="left">
+    <button class="navbtn" id="prev">←</button>
+    <span class="counter" id="counter">1 / 12</span>
+    <button class="navbtn" id="next">→</button>
+  </div>
+  <span class="title" id="navtitle">Elux Website Review</span>
+  <div class="right" id="dots"></div>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let idx = 0;
+
+  const titles = [
+    "Cover", "One-minute version", "What's working", "Ship-blocker: videos",
+    "Strategic gap: AI-native", "Smaller fixes", "Performance / motion",
+    "Structure: core principle", "Recommended structure", "Beyond the homepage",
+    "Launch punch-list", "What's next"
+  ];
+
+  const dotsWrap = document.getElementById('dots');
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' on' : '');
+    d.addEventListener('click', () => go(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(document.querySelectorAll('.dot'));
+
+  function go(n) {
+    idx = Math.max(0, Math.min(total - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+    document.getElementById('counter').textContent = (idx + 1) + ' / ' + total;
+    document.getElementById('navtitle').textContent = titles[idx] || 'Elux Website Review';
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  document.getElementById('prev').addEventListener('click', () => go(idx - 1));
+  document.getElementById('next').addEventListener('click', () => go(idx + 1));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(idx + 1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   { e.preventDefault(); go(idx - 1); }
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(total - 1);
+  });
+</script>
+</body>
+</html>
