@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+*.log
+.vite
+.env
+.env.local
+
+# Vite temp files
+vite.config.js.timestamp-*.mjs
+
+# Local-only files (not part of the project)
+Archive.zip
+elux-rebrand-visual-spec.html

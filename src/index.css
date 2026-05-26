@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    background-color: #FAFAF7;
+    color: #101010;
+    font-family: 'Figtree', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: #2853FF;
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply font-display text-xs font-semibold uppercase tracking-[0.14em] text-muted;
+  }
+  .display-xl {
+    @apply font-display font-medium text-[64px] md:text-[80px] leading-[1.05] tracking-tightest text-ink;
+  }
+  .h2-display {
+    @apply font-display font-medium text-[40px] md:text-[56px] leading-[1.1] tracking-tighter text-ink;
+  }
+  .h3-display {
+    @apply font-display font-medium text-[28px] md:text-[40px] leading-[1.15] tracking-tighter text-ink;
+  }
+  .lede {
+    @apply font-body text-base md:text-lg leading-[1.55] text-ink-soft max-w-xl;
+  }
+  .body-text {
+    @apply font-body text-[15px] leading-[1.6] text-ink-soft;
+  }
+  .micro {
+    @apply font-display font-semibold text-[11px] uppercase tracking-[0.1em] text-muted;
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-2.5 px-5 py-3.5 rounded-lg font-display font-semibold text-sm border border-transparent transition-transform duration-150;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { @apply btn bg-primary text-white; }
+  .btn-dark    { @apply btn bg-ink text-white; }
+  .btn-ghost   { @apply btn bg-transparent text-ink border-ink; }
+  .btn-pill    { @apply rounded-full px-6; }
+
+  .card-base {
+    @apply bg-card border border-line rounded-2xl;
+  }
+}
+
+/* GSAP-friendly base classes */
+.section-reveal { opacity: 0; transform: translateY(24px); }
